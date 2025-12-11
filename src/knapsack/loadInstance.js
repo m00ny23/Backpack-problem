@@ -1,40 +1,98 @@
+import fs from "fs/promises";
+
 /**
- * File: src/knapsack/loadInstance.js
- *
- * Purpose:
- *   Load a 0-1 knapsack problem instance from a text file
- *   in the specified "low-dimensional" format.
- *
- * Inputs:
- *   - A path or handle to a text file containing the knapsack instance.
- *   - Expected format:
- *       Line 1:  "<n> <C>"
- *                n  - number of items
- *                C  - knapsack capacity
- *       Next n lines: "<value_i> <weight_i>"
- *                value_i  - profit/value of item i
- *                weight_i - weight of item i
- *
- * Processing:
- *   - Read the entire file as text.
- *   - Parse the first line to extract:
- *       - number of items (n)
- *       - capacity (C)
- *   - For each of the next n lines:
- *       - split the line into value and weight
- *       - convert them to numbers
- *       - store as `{ value, weight }` in an array.
- *   - Optionally validate:
- *       - correct number of item lines,
- *       - non-negative weights and values,
- *       - sensible capacity.
- *
- * Outputs:
- *   - Returns an object describing the instance, e.g.:
- *       {
- *         capacity: <number>,
- *         items: [ { value: <number>, weight: <number> }, ... ]
- *       }
- *   - Optionally also returns `itemCount` (n), which should match
- *     `items.length`.
+ * @typedef {Object} KnapsackItem
+ * @property {number} value  - wartość (profit) przedmiotu
+ * @property {number} weight - waga przedmiotu
  */
+
+/**
+ * @typedef {Object} KnapsackInstance
+ * @property {number} itemCount        - liczba przedmiotów (n)
+ * @property {number} capacity         - pojemność plecaka
+ * @property {KnapsackItem[]} items    - tablica przedmiotów
+ */
+
+/**
+ * Wczytuje instancję problemu plecakowego z pliku tekstowego.
+ *
+ * Oczekiwany format:
+ *
+ *  n capacity
+ *  value_1 weight_1
+ *  ...
+ *  value_n weight_n
+ *
+ * @param {string} filePath - ścieżka do pliku z danymi (np. "data/backpacks low-dimensional/f1_l-d_kp_10_269.txt")
+ * @returns {Promise<KnapsackInstance>}
+ */
+export async function loadKnapsackInstance(filePath) {
+  const raw = await fs.readFile(filePath, "utf-8");
+
+  // Podział na linie, usunięcie pustych
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    throw new Error(
+      `Plik "${filePath}" jest pusty lub zawiera tylko puste linie.`
+    );
+  }
+
+  // Pierwsza linia: n capacity
+  const [firstLine, ...itemLines] = lines;
+  const [nStr, capacityStr] = firstLine.split(/\s+/);
+
+  const itemCount = Number.parseInt(nStr, 10);
+  const capacity = Number.parseInt(capacityStr, 10);
+
+  if (!Number.isFinite(itemCount) || !Number.isFinite(capacity)) {
+    throw new Error(
+      `Niepoprawny nagłówek w pliku "${filePath}". Oczekiwano: "n capacity", np. "10 269". Odczytano: "${firstLine}".`
+    );
+  }
+
+  /** @type {KnapsackItem[]} */
+  const items = [];
+
+  for (let i = 0; i < itemLines.length; i++) {
+    const line = itemLines[i];
+    const [valueStr, weightStr] = line.split(/\s+/);
+
+    if (valueStr === undefined || weightStr === undefined) {
+      throw new Error(
+        `Niepoprawny format w linii ${
+          i + 2
+        } pliku "${filePath}". Oczekiwano: "value weight". Odczytano: "${line}".`
+      );
+    }
+
+    const value = Number.parseInt(valueStr, 10);
+    const weight = Number.parseInt(weightStr, 10);
+
+    if (!Number.isFinite(value) || !Number.isFinite(weight)) {
+      throw new Error(
+        `Niepoprawne dane liczbowe w linii ${
+          i + 2
+        } pliku "${filePath}". Odczytano: "${line}".`
+      );
+    }
+
+    items.push({ value, weight });
+  }
+
+  if (items.length !== itemCount) {
+    // Można też tylko ostrzec i przyjąć min(n, items.length), ale błąd jest bardziej bezpieczny.
+    throw new Error(
+      `Zadeklarowana liczba przedmiotów to ${itemCount}, ale znaleziono ${items.length} linii z przedmiotami w pliku "${filePath}".`
+    );
+  }
+
+  return {
+    itemCount,
+    capacity,
+    items,
+  };
+}

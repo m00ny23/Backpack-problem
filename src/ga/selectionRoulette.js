@@ -1,31 +1,50 @@
 /**
- * File: src/ga/selectionRoulette.js
- *
- * Purpose:
- *   Implement roulette-wheel selection (fitness-proportional selection)
- *   for choosing parents from a population based on their fitness.
- *
- * Inputs:
- *   - population:
- *       Array of individuals, each with at least a numeric `fitness` property.
- *   - selectionCount:
- *       Number of individuals to select for the mating pool (typically equal
- *       to population size or another required count).
- *
- * Processing:
- *   - Compute the total sum of fitness values in the population.
- *   - For each individual, compute a selection probability:
- *         p_i = fitness_i / totalFitness.
- *   - Build a cumulative probability array (roulette wheel).
- *   - Repeat until `selectionCount` individuals are chosen:
- *       - draw a random number in (0, 1),
- *       - find the first individual whose cumulative probability is >= draw,
- *       - add that individual (or a copy) to the mating pool.
- *   - If totalFitness is zero (e.g., all individuals have fitness 0),
- *     fall back to a uniform random selection among all individuals.
- *
- * Outputs:
- *   - Returns an array of selected individuals (mating pool),
- *     possibly containing duplicates (better individuals may be picked
- *     multiple times).
+ * @typedef {Object} Individual
+ * @property {number[]} chromosome
+ * @property {number} fitness
  */
+
+/**
+ * Selekcja ruletkowa (proporcjonalna do fitness).
+ *
+ * Idea:
+ *  - obliczamy sumę fitnessów,
+ *  - losujemy liczbę r z [0, suma),
+ *  - przechodzimy po populacji sumując fitness,
+ *    pierwszy osobnik, dla którego suma >= r, zostaje wybrany.
+ *
+ * Jeśli wszystkie fitnessy są <= 0, wybieramy osobnika losowego.
+ *
+ * @param {Individual[]} population
+ * @returns {Individual}
+ */
+export function selectionRoulette(population) {
+  if (!population || population.length === 0) {
+    throw new Error(
+      "Populacja jest pusta – nie można wykonać selekcji ruletkowej."
+    );
+  }
+
+  // Fitness może być teoretycznie ujemny; dla bezpieczeństwa bierzemy max(fitness, 0)
+  const fitnesses = population.map((ind) => Math.max(0, ind.fitness));
+  const totalFitness = fitnesses.reduce((sum, f) => sum + f, 0);
+
+  // Brak informacji selekcyjnej (same zera) -> losowy osobnik
+  if (totalFitness <= 0) {
+    const randomIndex = Math.floor(Math.random() * population.length);
+    return population[randomIndex];
+  }
+
+  const r = Math.random() * totalFitness;
+  let cumulative = 0;
+
+  for (let i = 0; i < population.length; i++) {
+    cumulative += fitnesses[i];
+    if (cumulative >= r) {
+      return population[i];
+    }
+  }
+
+  // Na wszelki wypadek (zaokrąglenia) zwracamy ostatniego
+  return population[population.length - 1];
+}

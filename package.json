@@ -1,0 +1,19 @@
+{
+  "name": "genetic-knapsack",
+  "version": "1.0.0",
+  "description": "Algorytm genetyczny dla problemu plecakowego",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "keywords": [
+    "genetic-algorithm",
+    "knapsack",
+    "ai",
+    "optimization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
