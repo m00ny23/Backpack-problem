@@ -1,3 +1,5 @@
+// src/ga/runGA.js
+
 /**
  * @typedef {Object} Individual
  * @property {number[]} chromosome - binarny chromosom (0/1)
@@ -31,24 +33,43 @@
  */
 
 /**
+ * Funkcja, która generuje nowy chromosom (np. osobnik startowy).
+ *
+ * @callback CreateChromosomeFn
+ * @param {number} chromosomeLength
+ * @returns {number[]} chromosom
+ */
+
+/**
+ * Funkcja naprawiająca chromosom (np. usuwająca nadmiarowe przedmioty,
+ * żeby wynik był dopuszczalny).
+ *
+ * @callback RepairFn
+ * @param {number[]} chromosome
+ * @returns {number[]} naprawiony chromosom
+ */
+
+/**
  * @typedef {Object} GAOptions
  * @property {number} populationSize        - rozmiar populacji
  * @property {number} numGenerations        - liczba iteracji / pokoleń
- * @property {number} chromosomeLength      - długość chromosomu (dla plecaka = liczba przedmiotów)
+ * @property {number} chromosomeLength      - długość chromosomu
  * @property {FitnessFn} fitnessFn          - funkcja przystosowania
  * @property {SelectionFn} selectionFn      - funkcja selekcji rodziców
- * @property {CrossoverFn} crossoverFn      - funkcja krzyżowania (jedno- lub dwupunktowego)
- * @property {MutationFn} mutationFn        - funkcja mutacji (binarnej)
- * @property {number} [crossoverRate=0.8]   - prawdopodobieństwo krzyżowania (0..1)
- * @property {number} [mutationRate=0.01]   - prawdopodobieństwo mutacji pojedynczego genu (0..1)
- * @property {number} [elitismCount=1]      - ile najlepszych osobników kopiujemy bez zmian do następnej populacji
+ * @property {CrossoverFn} crossoverFn      - funkcja krzyżowania
+ * @property {MutationFn} mutationFn        - funkcja mutacji
+ * @property {number} [crossoverRate=0.8]   - prawdopodobieństwo krzyżowania
+ * @property {number} [mutationRate=0.01]   - prawdopodobieństwo mutacji genu
+ * @property {number} [elitismCount=1]      - liczba elit
+ * @property {CreateChromosomeFn} [createChromosomeFn] - niestandardowa inicjalizacja
+ * @property {RepairFn} [repairFn]          - opcjonalna funkcja naprawy chromosomu
  */
 
 /**
  * @typedef {Object} GARunResult
  * @property {Individual} bestIndividual    - najlepszy znaleziony osobnik (globalnie)
  * @property {number} bestFitness           - jego wartość funkcji przystosowania
- * @property {number[]} bestFitnessHistory  - historia najlepszej wartości (po każdym pokoleniu)
+ * @property {number[]} bestFitnessHistory  - historia najlepszego fitness (po każdym pokoleniu)
  * @property {Individual[]} finalPopulation - populacja z ostatniego pokolenia
  */
 
@@ -67,18 +88,38 @@ function createRandomChromosome(length) {
 }
 
 /**
- * Inicjuje losową populację osobników.
+ * Inicjuje populację osobników.
+ * Jeśli podano createChromosomeFn, używa jej do tworzenia chromosomów.
+ * Jeśli podano repairFn, naprawia każdy chromosom przed obliczeniem fitness.
  *
  * @param {number} populationSize
  * @param {number} chromosomeLength
  * @param {FitnessFn} fitnessFn
+ * @param {CreateChromosomeFn | undefined} createChromosomeFn
+ * @param {RepairFn | undefined} repairFn
  * @returns {Individual[]}
  */
-function createInitialPopulation(populationSize, chromosomeLength, fitnessFn) {
+function createInitialPopulation(
+  populationSize,
+  chromosomeLength,
+  fitnessFn,
+  createChromosomeFn,
+  repairFn
+) {
   const population = [];
 
   for (let i = 0; i < populationSize; i++) {
-    const chromosome = createRandomChromosome(chromosomeLength);
+    let chromosome;
+    if (typeof createChromosomeFn === "function") {
+      chromosome = createChromosomeFn(chromosomeLength);
+    } else {
+      chromosome = createRandomChromosome(chromosomeLength);
+    }
+
+    if (typeof repairFn === "function") {
+      chromosome = repairFn(chromosome);
+    }
+
     const fitness = fitnessFn(chromosome);
     population.push({ chromosome, fitness });
   }
@@ -119,7 +160,6 @@ function findBestIndividual(population) {
     }
   }
 
-  // Zwracamy kopię, żeby późniejsze modyfikacje populacji nie psuły najlepszego osobnika
   return {
     chromosome: [...best.chromosome],
     fitness: best.fitness,
@@ -128,9 +168,6 @@ function findBestIndividual(population) {
 
 /**
  * Główny algorytm genetyczny (generacyjny, z elitaryzmem).
- *
- * Jest w pełni ogólny – nie zależy od problemu (plecak/whatever),
- * wymaga tylko binarnego kodowania i podanych operatorów.
  *
  * @param {GAOptions} options
  * @returns {GARunResult}
@@ -147,6 +184,8 @@ export function runGA(options) {
     crossoverRate = 0.8,
     mutationRate = 0.01,
     elitismCount = 1,
+    createChromosomeFn,
+    repairFn,
   } = options;
 
   if (populationSize <= 0) {
@@ -163,7 +202,9 @@ export function runGA(options) {
   let population = createInitialPopulation(
     populationSize,
     chromosomeLength,
-    fitnessFn
+    fitnessFn,
+    createChromosomeFn,
+    repairFn
   );
 
   // 2. Najlepszy osobnik (globalnie) + historia
@@ -194,7 +235,7 @@ export function runGA(options) {
       const parent1 = selectionFn(population);
       const parent2 = selectionFn(population);
 
-      // Kopie chromosomów rodziców (żeby ich nie modyfikować)
+      // Kopie chromosomów rodziców
       let childChromosome1 = [...parent1.chromosome];
       let childChromosome2 = [...parent2.chromosome];
 
@@ -208,14 +249,20 @@ export function runGA(options) {
         childChromosome2 = offspring2;
       }
 
-      // Mutacja (funkcja mutacji sama decyduje, które geny zmienić na podstawie mutationRate)
+      // Mutacja
       childChromosome1 = mutationFn(childChromosome1, mutationRate);
       childChromosome2 = mutationFn(childChromosome2, mutationRate);
+
+      // Naprawa (np. ograniczenie wagi plecaka)
+      if (typeof repairFn === "function") {
+        childChromosome1 = repairFn(childChromosome1);
+        childChromosome2 = repairFn(childChromosome2);
+      }
 
       // Dodajemy dzieci do nowej populacji
       newPopulation.push({
         chromosome: childChromosome1,
-        fitness: 0, // policzymy za chwilę
+        fitness: 0,
       });
 
       if (newPopulation.length < populationSize) {

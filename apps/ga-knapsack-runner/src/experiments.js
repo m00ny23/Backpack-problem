@@ -1,11 +1,17 @@
+// src/experiments.js
+
 import { CONFIG } from "./config.js";
 import { runGA } from "./ga/runGA.js";
 import { fitnessKnapsack } from "./knapsack/fitnessKnapsack.js";
 import { decodeKnapsackSolution } from "./knapsack/solutionUtils.js";
+import {
+  makeFeasibleChromosomeFn,
+  makeRepairFn,
+} from "./knapsack/gaSupport.js";
 
 /**
  * Pomocnicza funkcja – wyciąga nazwę pliku i kategorię zbioru
- * (low-dimensional / large_scale / unknown) na podstawie ścieżki.
+ * (low-dimensional / large_scale / high-dimensional / unknown) na podstawie ścieżki.
  *
  * @param {string} datasetPath
  * @param {import("./knapsack/fitnessKnapsack.js").KnapsackInstance} instance
@@ -18,8 +24,10 @@ function buildDatasetMeta(datasetPath, instance) {
   let category = "unknown";
   if (datasetPath.includes("low-dimensional")) {
     category = "low-dimensional";
-  } else if (datasetPath.includes("large_scale" || "l-s")) {
+  } else if (datasetPath.includes("large_scale")) {
     category = "large_scale";
+  } else if (datasetPath.includes("high-dimensional")) {
+    category = "high-dimensional";
   }
 
   return {
@@ -29,7 +37,7 @@ function buildDatasetMeta(datasetPath, instance) {
     category,
     itemCount: instance.itemCount,
     capacity: instance.capacity,
-    optimum: null, // możesz ewentualnie ręcznie dopisać w JSON albo użyć w Pythonie
+    optimum: null, // można uzupełnić ręcznie w JSON / Pythonie
   };
 }
 
@@ -49,6 +57,8 @@ function runSingleGARun({
   populationSize,
   numGenerations,
   elitismCount,
+  createChromosomeFn,
+  repairFn,
 }) {
   const fitnessFn = (chromosome) => fitnessKnapsack(chromosome, instance);
 
@@ -63,6 +73,8 @@ function runSingleGARun({
     crossoverRate,
     mutationRate,
     elitismCount,
+    createChromosomeFn,
+    repairFn,
   });
 
   const decoded = decodeKnapsackSolution(
@@ -110,8 +122,11 @@ export function runAllExperiments(instance, datasetPath) {
   const selectionStrategies = CONFIG.strategies.selection;
   const crossoverStrategies = CONFIG.strategies.crossover;
 
-  // --- Ustawienia siatki parametrów dla części 3.5 ---
+  // NOWOŚĆ: specjalna inicjalizacja i naprawa dla plecaka
+  const createChromosomeFn = makeFeasibleChromosomeFn(instance);
+  const repairFn = makeRepairFn(instance);
 
+  // --- Ustawienia siatki parametrów dla części 3.5 ---
   const mutationRatesGrid = [0.005, 0.02, 0.05];
   const crossoverRatesGrid = [0.6, 0.8, 0.95];
 
@@ -137,6 +152,8 @@ export function runAllExperiments(instance, datasetPath) {
           populationSize,
           numGenerations,
           elitismCount,
+          createChromosomeFn,
+          repairFn,
         });
 
         groupRuns.push({
@@ -181,11 +198,13 @@ export function runAllExperiments(instance, datasetPath) {
         crossoverKey: "onePoint",
         crossoverFn: crossoverStrategies.onePoint,
         mutationFn,
-        mutationRate, // bazowy z CONFIG.ga
-        crossoverRate, // bazowy z CONFIG.ga
+        mutationRate,
+        crossoverRate,
         populationSize,
         numGenerations,
         elitismCount,
+        createChromosomeFn,
+        repairFn,
       });
 
       groupRuns.push({
@@ -233,6 +252,8 @@ export function runAllExperiments(instance, datasetPath) {
         populationSize,
         numGenerations,
         elitismCount,
+        createChromosomeFn,
+        repairFn,
       });
 
       groupRuns.push({
@@ -281,6 +302,8 @@ export function runAllExperiments(instance, datasetPath) {
         populationSize,
         numGenerations,
         elitismCount,
+        createChromosomeFn,
+        repairFn,
       });
 
       groupRuns.push({
