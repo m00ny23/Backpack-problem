@@ -40,12 +40,12 @@ export const CONFIG = {
     /**
      * Rozmiar populacji (liczba osobników w każdym pokoleniu).
      */
-    populationSize: 100,
+    populationSize: 300,
 
     /**
      * Liczba pokoleń (iteracji algorytmu genetycznego).
      */
-    numGenerations: 200,
+    numGenerations: 2000,
 
     /**
      * Prawdopodobieństwo krzyżowania (0..1).
@@ -57,7 +57,7 @@ export const CONFIG = {
      * Prawdopodobieństwo mutacji pojedynczego genu (0..1).
      * Typowy zakres: 0.0 - 0.1
      */
-    mutationRate: 0.02,
+    mutationRate: 0.001,
 
     /**
      * Liczba najlepszych osobników, które kopiujemy bez zmian
