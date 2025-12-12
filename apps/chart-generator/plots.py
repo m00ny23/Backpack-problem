@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+.venv\Scripts\activate
+pip install matplotlib
 python plots.py --in ../../results --out ./plots
 
 plots.py — generator wykresów GA (knapsack) z plików JSON do PNG/PDF (matplotlib)
