@@ -52,7 +52,7 @@
 /**
  * @typedef {Object} GAOptions
  * @property {number} populationSize        - rozmiar populacji
- * @property {number} numGenerations        - liczba iteracji / pokoleń
+ * @property {number} numGenerations        - maksymalna liczba iteracji / pokoleń
  * @property {number} chromosomeLength      - długość chromosomu
  * @property {FitnessFn} fitnessFn          - funkcja przystosowania
  * @property {SelectionFn} selectionFn      - funkcja selekcji rodziców
@@ -63,6 +63,8 @@
  * @property {number} [elitismCount=1]      - liczba elit
  * @property {CreateChromosomeFn} [createChromosomeFn] - niestandardowa inicjalizacja
  * @property {RepairFn} [repairFn]          - opcjonalna funkcja naprawy chromosomu
+ * @property {number|null} [maxStallGenerations=null] - ile kolejnych pokoleń bez poprawy
+ *                                                     powoduje wczesne zatrzymanie
  */
 
 /**
@@ -71,6 +73,7 @@
  * @property {number} bestFitness           - jego wartość funkcji przystosowania
  * @property {number[]} bestFitnessHistory  - historia najlepszego fitness (po każdym pokoleniu)
  * @property {Individual[]} finalPopulation - populacja z ostatniego pokolenia
+ * @property {number} generationsRun        - faktyczna liczba wykonanych pokoleń
  */
 
 /**
@@ -167,7 +170,7 @@ function findBestIndividual(population) {
 }
 
 /**
- * Główny algorytm genetyczny (generacyjny, z elitaryzmem).
+ * Główny algorytm genetyczny (generacyjny, z elitaryzmem i opcjonalnym early stoppingiem).
  *
  * @param {GAOptions} options
  * @returns {GARunResult}
@@ -186,6 +189,7 @@ export function runGA(options) {
     elitismCount = 1,
     createChromosomeFn,
     repairFn,
+    maxStallGenerations = null,
   } = options;
 
   if (populationSize <= 0) {
@@ -210,6 +214,9 @@ export function runGA(options) {
   // 2. Najlepszy osobnik (globalnie) + historia
   let globalBest = findBestIndividual(population);
   const bestFitnessHistory = [globalBest.fitness];
+
+  let stallCounter = 0; // licznik kolejnych pokoleń bez poprawy
+  let generationsRun = 0; // faktyczna liczba wykonanych pokoleń
 
   // 3. Główna pętla ewolucji
   for (let generation = 1; generation <= numGenerations; generation++) {
@@ -280,15 +287,30 @@ export function runGA(options) {
     evaluatePopulation(population, fitnessFn);
     const currentBest = findBestIndividual(population);
 
-    // Aktualizacja najlepszego globalnie
+    // 3e. Aktualizacja najlepszego globalnie i licznika stagnacji
     if (currentBest.fitness > globalBest.fitness) {
       globalBest = {
         chromosome: [...currentBest.chromosome],
         fitness: currentBest.fitness,
       };
+      stallCounter = 0; // poprawa -> reset licznika
+    } else {
+      stallCounter += 1;
     }
 
     bestFitnessHistory.push(globalBest.fitness);
+    generationsRun = generation;
+
+    // 3f. Early stopping: jeśli zbyt długo brak poprawy, przerywamy
+    if (
+      maxStallGenerations !== null &&
+      maxStallGenerations > 0 &&
+      stallCounter >= maxStallGenerations
+    ) {
+      // można tutaj ewentualnie dodać console.log informacyjny,
+      // ale zostawiamy to do logiki wyżej (experiments/main)
+      break;
+    }
   }
 
   return {
@@ -296,5 +318,6 @@ export function runGA(options) {
     bestFitness: globalBest.fitness,
     bestFitnessHistory,
     finalPopulation: population,
+    generationsRun,
   };
 }

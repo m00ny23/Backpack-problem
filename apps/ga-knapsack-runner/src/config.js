@@ -40,12 +40,12 @@ export const CONFIG = {
     /**
      * Rozmiar populacji (liczba osobników w każdym pokoleniu).
      */
-    populationSize: 300,
+    populationSize: 600,
 
     /**
-     * Liczba pokoleń (iteracji algorytmu genetycznego).
+     * Maksymalna liczba pokoleń (iteracji algorytmu genetycznego).
      */
-    numGenerations: 2000,
+    numGenerations: 4000,
 
     /**
      * Prawdopodobieństwo krzyżowania (0..1).
@@ -55,15 +55,23 @@ export const CONFIG = {
 
     /**
      * Prawdopodobieństwo mutacji pojedynczego genu (0..1).
-     * Typowy zakres: 0.0 - 0.1
      */
-    mutationRate: 0.001,
+    mutationRate: 0.0005,
 
     /**
      * Liczba najlepszych osobników, które kopiujemy bez zmian
      * do kolejnej populacji (elitaryzm).
      */
-    elitismCount: 2,
+    elitismCount: 4,
+
+    /**
+     * Limit stagnacji:
+     * jeśli przez tyle kolejnych pokoleń nie ma poprawy globalnego maksimum,
+     * przerywamy bieg GA dla danej konfiguracji (early stopping).
+     *
+     * 0 lub null -> brak wczesnego zatrzymania (zawsze numGenerations).
+     */
+    maxStallGenerations: 400,
   },
 
   operators: {
@@ -94,7 +102,6 @@ export const CONFIG = {
 
   /**
    * Zbiór wszystkich strategii, wygodny przy eksperymentach.
-   * Możesz tego użyć np. w osobnym skrypcie eksperymentalnym.
    */
   strategies: {
     selection: selectionStrategies,

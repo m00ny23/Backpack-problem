@@ -37,7 +37,7 @@ function buildDatasetMeta(datasetPath, instance) {
     category,
     itemCount: instance.itemCount,
     capacity: instance.capacity,
-    optimum: null, // można uzupełnić ręcznie w JSON / Pythonie
+    optimum: null,
   };
 }
 
@@ -59,6 +59,7 @@ function runSingleGARun({
   elitismCount,
   createChromosomeFn,
   repairFn,
+  maxStallGenerations,
 }) {
   const fitnessFn = (chromosome) => fitnessKnapsack(chromosome, instance);
 
@@ -75,6 +76,7 @@ function runSingleGARun({
     elitismCount,
     createChromosomeFn,
     repairFn,
+    maxStallGenerations,
   });
 
   const decoded = decodeKnapsackSolution(
@@ -89,6 +91,7 @@ function runSingleGARun({
     crossoverRate,
     bestFitnessHistory: result.bestFitnessHistory,
     finalBestFitness: result.bestFitness,
+    generationsRun: result.generationsRun,
     finalBestSolution: {
       chromosome: result.bestIndividual.chromosome,
       totalValue: decoded.totalValue,
@@ -116,13 +119,14 @@ export function runAllExperiments(instance, datasetPath) {
     mutationRate,
     crossoverRate,
     elitismCount,
+    maxStallGenerations,
   } = CONFIG.ga;
 
   const mutationFn = CONFIG.operators.mutationFn;
   const selectionStrategies = CONFIG.strategies.selection;
   const crossoverStrategies = CONFIG.strategies.crossover;
 
-  // NOWOŚĆ: specjalna inicjalizacja i naprawa dla plecaka
+  // specjalna inicjalizacja i naprawa dla plecaka
   const createChromosomeFn = makeFeasibleChromosomeFn(instance);
   const repairFn = makeRepairFn(instance);
 
@@ -154,6 +158,7 @@ export function runAllExperiments(instance, datasetPath) {
           elitismCount,
           createChromosomeFn,
           repairFn,
+          maxStallGenerations,
         });
 
         groupRuns.push({
@@ -171,6 +176,7 @@ export function runAllExperiments(instance, datasetPath) {
         populationSize,
         numGenerations,
         elitismCount,
+        maxStallGenerations,
       },
       grid: {
         mutationRates: mutationRatesGrid,
@@ -205,6 +211,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         createChromosomeFn,
         repairFn,
+        maxStallGenerations,
       });
 
       groupRuns.push({
@@ -223,6 +230,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         mutationRate,
         crossoverRate,
+        maxStallGenerations,
         crossover: "onePoint",
       },
       runs: groupRuns,
@@ -254,6 +262,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         createChromosomeFn,
         repairFn,
+        maxStallGenerations,
       });
 
       groupRuns.push({
@@ -272,6 +281,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         mutationRate,
         crossoverRate,
+        maxStallGenerations,
         selection: "roulette",
       },
       runs: groupRuns,
@@ -304,6 +314,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         createChromosomeFn,
         repairFn,
+        maxStallGenerations,
       });
 
       groupRuns.push({
@@ -322,6 +333,7 @@ export function runAllExperiments(instance, datasetPath) {
         elitismCount,
         mutationRate,
         crossoverRate,
+        maxStallGenerations,
         crossover: "onePoint",
       },
       runs: groupRuns,
@@ -343,6 +355,7 @@ export function runAllExperiments(instance, datasetPath) {
           mutationRate: run.mutationRate,
           crossoverRate: run.crossoverRate,
           finalBestFitness: run.finalBestFitness,
+          generationsRun: run.generationsRun,
           finalBestSolution: run.finalBestSolution,
         };
       }
@@ -357,6 +370,7 @@ export function runAllExperiments(instance, datasetPath) {
       elitismCount,
       baseMutationRate: mutationRate,
       baseCrossoverRate: crossoverRate,
+      maxStallGenerations,
     },
     experimentDesign: {
       mutationRatesGrid,
