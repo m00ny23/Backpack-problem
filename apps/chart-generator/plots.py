@@ -1,47 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
+Użycie:
 .venv\Scripts\activate
 pip install matplotlib
 python plots.py --in ../../results --out ./plots
 
-plots.py — generator wykresów GA (knapsack) z plików JSON do PNG/PDF (matplotlib)
-
-Założenia (zgodne z Twoim JSON):
-- w katalogu wejściowym są pliki *.json
-- każdy JSON ma strukturę:
-  {
-    "dataset": { "baseName": ..., "category": ..., "itemCount": ..., "capacity": ... },
-    "gaDefaults": { "numGenerations": ... , ... },
-    "experiments": [
-      {
-        "group": "mutation_crossover_grid_3.5" | "selection_comparison_4.5" | "crossover_comparison_4.5" | "selection_comparison_5.0" | ...
-        "description": "...",
-        "baseParameters": {...} (opcjonalnie),
-        "runs": [
-          {
-            "id": "...", (opcjonalnie)
-            "selection": "roulette"|"ranking"|"tournament"|... (opcjonalnie)
-            "crossover": "onePoint"|"twoPoint"|... (opcjonalnie)
-            "mutationRate": 0.01 (opcjonalnie)
-            "crossoverRate": 0.8 (opcjonalnie)
-            "bestFitnessHistory": [ ... liczby ... ]  (WYMAGANE)
-          }
-        ]
-      }
-    ]
-  }
-
-Użycie:
-  python plots.py
-  python plots.py --in ./results_json --out ./plots --format png
-  python plots.py --in . --out ./plots --format both --recursive
-
-Wynik:
-- dla każdego JSON: osobne pliki wykresów w /plots
-- osobny wykres na "group" (3.5 / 4.5 / 5.0), czyli spełnia wymagania porównań
 """
-
 from __future__ import annotations
 
 import argparse
@@ -54,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 
 # ----------------------------
@@ -79,6 +43,72 @@ def ensure_dir(path: Path) -> None:
 
 def is_number(x: Any) -> bool:
     return isinstance(x, (int, float)) and not (isinstance(x, float) and (math.isnan(x) or math.isinf(x)))
+
+def fmt_num(v: float) -> str:
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    return f"{v:g}"
+
+def compute_series_stats(y: List[float], declared_num_generations: Optional[int]) -> Tuple[float, int, int]:
+    best = max(y)
+    idx_best = next((i for i, val in enumerate(y) if val == best), 0)
+
+    iterations_executed = max(0, len(y) - 1)
+    generation_best = idx_best
+
+    return best, generation_best, iterations_executed
+
+
+def add_stats_block(
+    fig: Any,
+    series_lines: List[Tuple["Series", Any]],
+    reserved_bottom: float,
+    declared_num_generations: Optional[int],
+) -> List[Any]:
+    n = len(series_lines)
+    if n == 0:
+        return []
+
+    y_pad = 0.01
+    y0 = y_pad
+    y1 = max(y0 + 0.02, reserved_bottom - y_pad)
+
+    avail = max(0.02, y1 - y0)
+    row_h = avail / n
+
+    sq = min(0.018, row_h * 0.7)
+    x_sq = 0.02
+    x_text = x_sq + sq + 0.01
+    fs = 9 if n <= 8 else 8
+
+    artists: List[Any] = []
+
+    for idx, (s, line) in enumerate(series_lines):
+        y_center = y1 - (idx + 0.5) * row_h
+        y_sq = y_center - sq / 2
+
+        rect = Rectangle(
+            (x_sq, y_sq),
+            sq,
+            sq,
+            transform=fig.transFigure,
+            facecolor=line.get_color(),
+            edgecolor="none",
+        )
+        fig.patches.append(rect)
+        artists.append(rect)
+
+        best, gen_best, gens = compute_series_stats(s.y, declared_num_generations)
+        text = (
+            f"{s.label} — "
+            f"Najlepszy fitness: {fmt_num(best)}, "
+            f"Generacja: {gen_best}, "
+            f"Ilość generacji: {gens}"
+        )
+        t = fig.text(x_text, y_center, text, ha="left", va="center", fontsize=fs)
+        artists.append(t)
+
+    return artists
 
 
 # ----------------------------
@@ -111,7 +141,6 @@ GROUP_TITLES = {
     "selection_comparison_5.0": "Ocena 5.0 — porównanie selekcji (rankingowa/ruletkowa/turniejowa)",
 }
 
-# Kolejność rysowania „znanych” grup (żeby output był spójny)
 GROUP_ORDER = [
     "mutation_crossover_grid_3.5",
     "selection_comparison_4.5",
@@ -132,7 +161,6 @@ def extract_dataset_meta(data: Dict[str, Any]) -> DatasetMeta:
 
     num_generations = gd.get("numGenerations", gd.get("maxGenerations", None))
 
-    # Normalize ints if possible
     try:
         if item_count is not None:
             item_count = int(item_count)
@@ -161,19 +189,14 @@ def extract_dataset_meta(data: Dict[str, Any]) -> DatasetMeta:
 
 
 def build_run_label(group: str, run: Dict[str, Any]) -> str:
-    """
-    Tworzy czytelną etykietę legendy na podstawie typu wykresu (group) i pól run.
-    """
     selection = run.get("selection")
     crossover = run.get("crossover")
     mut = run.get("mutationRate")
     cross = run.get("crossoverRate")
     rid = run.get("id")
 
-    # Helper do krótkiego formatowania
     def fmt_rate(x: Any) -> Optional[str]:
         if is_number(x):
-            # 0.01 -> 0.01, 0.005 -> 0.005
             return f"{float(x):g}"
         return None
 
@@ -186,7 +209,6 @@ def build_run_label(group: str, run: Dict[str, Any]) -> str:
             parts.append(f"mut={mut_s}")
         if cross_s is not None:
             parts.append(f"cross={cross_s}")
-        # jeśli w JSON dodatkowo jest selection/crossover, można dopisać (nie przeszkadza)
         if selection:
             parts.append(str(selection))
         if crossover:
@@ -196,19 +218,15 @@ def build_run_label(group: str, run: Dict[str, Any]) -> str:
         return str(rid) if rid else "run"
 
     if group in ("selection_comparison_4.5", "selection_comparison_5.0"):
-        # Tu zależy nam przede wszystkim na nazwie selekcji
         if selection:
             return str(selection)
-        # fallback: id
         return str(rid) if rid else "run"
 
     if group == "crossover_comparison_4.5":
-        # Tu zależy nam przede wszystkim na typie krzyżowania
         if crossover:
             return str(crossover)
         return str(rid) if rid else "run"
 
-    # Domyślnie: sensowne info, które jest
     parts = []
     if selection:
         parts.append(f"sel={selection}")
@@ -231,16 +249,13 @@ def extract_series_from_experiment(exp: Dict[str, Any]) -> List[Series]:
     for run in runs:
         y = run.get("bestFitnessHistory")
         if not isinstance(y, list) or len(y) == 0:
-            # pomijamy serie bez danych
             continue
 
-        # filtruj nienumeryczne (na wypadek błędów eksportu)
         y_clean: List[float] = []
         for v in y:
             if is_number(v):
                 y_clean.append(float(v))
             else:
-                # jeśli trafi się None/string, utnij serię do tego miejsca (bezpieczniej niż zgadywać)
                 break
 
         if len(y_clean) == 0:
@@ -249,9 +264,7 @@ def extract_series_from_experiment(exp: Dict[str, Any]) -> List[Series]:
         label = build_run_label(group, run)
         series_list.append(Series(label=label, y=y_clean))
 
-    # Sortowanie serii dla czytelności legendy
     if group == "mutation_crossover_grid_3.5":
-        # sort: po mutationRate, potem crossoverRate jeśli da się wydobyć z label
         def sort_key(s: Series) -> Tuple[float, float, str]:
             mut = float("inf")
             cross = float("inf")
@@ -302,39 +315,53 @@ def plot_experiment(
     if not series_list:
         return None
 
-    plt.figure(figsize=(12, 7))
+    declared_num_generations: Optional[int] = meta.num_generations
+    bp = exp.get("baseParameters", {}) or {}
+    if is_number(bp.get("numGenerations")):
+        try:
+            declared_num_generations = int(bp.get("numGenerations"))
+        except Exception:
+            pass
 
-    # rysowanie serii
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    series_lines: List[Tuple[Series, Any]] = []
     for s in series_list:
         x = list(range(len(s.y)))
-        plt.plot(x, s.y, label=s.label)
+        (line,) = ax.plot(x, s.y, label=s.label)
+        series_lines.append((s, line))
 
-    plt.title(make_title(meta, group, exp))
-    plt.xlabel("Iteracja")
-    plt.ylabel("Najlepsza wartość fitness (best osobnik)")
+    ax.set_title(make_title(meta, group, exp))
+    ax.set_xlabel("Iteracja")
+    ax.set_ylabel("Najlepsza wartość fitness (best osobnik)")
+    ax.grid(True, alpha=0.3)
 
-    # siatka + legenda
-    plt.grid(True, alpha=0.3)
-
-    # Dla wielu serii (np. 3.5 grid) przydaje się mniejsza legenda
     if len(series_list) <= 8:
-        plt.legend()
+        ax.legend()
     else:
-        plt.legend(fontsize=8, ncol=2)
+        ax.legend(fontsize=8, ncol=2)
 
-    plt.tight_layout()
+    bottom = min(0.48, 0.12 + 0.022 * len(series_lines))
+    fig.tight_layout(rect=(0, bottom, 1, 1))
+
+    extra_artists = add_stats_block(
+        fig,
+        series_lines=series_lines,
+        reserved_bottom=bottom,
+        declared_num_generations=declared_num_generations,
+    )
 
     saved: List[Path] = []
     if out_format in ("png", "both"):
         p = out_path_base.with_suffix(".png")
-        plt.savefig(p, dpi=150, bbox_inches="tight")
+        fig.savefig(p, dpi=150, bbox_inches="tight", bbox_extra_artists=extra_artists)
         saved.append(p)
     if out_format in ("pdf", "both"):
         p = out_path_base.with_suffix(".pdf")
-        plt.savefig(p, bbox_inches="tight")
+        fig.savefig(p, bbox_inches="tight", bbox_extra_artists=extra_artists)
         saved.append(p)
 
-    plt.close()
+    plt.close(fig)
     return saved
 
 
@@ -351,7 +378,6 @@ def find_json_files(in_dir: Path, recursive: bool) -> List[Path]:
 
 
 def pick_experiments_in_order(experiments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    # Najpierw znane grupy wg GROUP_ORDER, potem reszta alfabetycznie
     buckets: Dict[str, List[Dict[str, Any]]] = {}
     for exp in experiments:
         g = str(exp.get("group", "unknown"))
@@ -362,7 +388,6 @@ def pick_experiments_in_order(experiments: List[Dict[str, Any]]) -> List[Dict[st
         for exp in buckets.pop(g, []):
             ordered.append(exp)
 
-    # reszta grup
     for g in sorted(buckets.keys()):
         ordered.extend(buckets[g])
 
@@ -409,7 +434,6 @@ def main() -> int:
         for exp in experiments:
             group = str(exp.get("group", "unknown"))
 
-            # Jeśli nie chcesz rysować nieznanych grup, można wyłączyć:
             if (group not in GROUP_TITLES) and (not args.include_unknown_groups):
                 continue
 
