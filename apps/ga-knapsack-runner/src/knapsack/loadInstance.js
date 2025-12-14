@@ -2,34 +2,24 @@ import fs from "fs/promises";
 
 /**
  * @typedef {Object} KnapsackItem
- * @property {number} value  - wartość (profit) przedmiotu
- * @property {number} weight - waga przedmiotu
+ * @property {number} value
+ * @property {number} weight
  */
 
 /**
  * @typedef {Object} KnapsackInstance
- * @property {number} itemCount        - liczba przedmiotów (n)
- * @property {number} capacity         - pojemność plecaka
- * @property {KnapsackItem[]} items    - tablica przedmiotów
+ * @property {number} itemCount
+ * @property {number} capacity
+ * @property {KnapsackItem[]} items
  */
 
 /**
- * Wczytuje instancję problemu plecakowego z pliku tekstowego.
- *
- * Oczekiwany format:
- *
- *  n capacity
- *  value_1 weight_1
- *  ...
- *  value_n weight_n
- *
- * @param {string} filePath - ścieżka do pliku z danymi (np. "data/backpacks low-dimensional/f1_l-d_kp_10_269.txt")
+ * @param {string} filePath
  * @returns {Promise<KnapsackInstance>}
  */
 export async function loadKnapsackInstance(filePath) {
   const raw = await fs.readFile(filePath, "utf-8");
 
-  // Podział na linie, usunięcie pustych
   const lines = raw
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -41,7 +31,6 @@ export async function loadKnapsackInstance(filePath) {
     );
   }
 
-  // Pierwsza linia: n capacity
   const [firstLine, ...itemLines] = lines;
   const [nStr, capacityStr] = firstLine.split(/\s+/);
 
@@ -84,7 +73,6 @@ export async function loadKnapsackInstance(filePath) {
   }
 
   if (items.length !== itemCount) {
-    // Można też tylko ostrzec i przyjąć min(n, items.length), ale błąd jest bardziej bezpieczny.
     throw new Error(
       `Zadeklarowana liczba przedmiotów to ${itemCount}, ale znaleziono ${items.length} linii z przedmiotami w pliku "${filePath}".`
     );

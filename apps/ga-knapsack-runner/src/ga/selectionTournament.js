@@ -5,13 +5,7 @@
  */
 
 /**
- * Tworzy funkcję selekcji turniejowej o zadanym rozmiarze turnieju.
- *
- * Algorytm (z powtórzeniami):
- *  - losujemy `tournamentSize` osobników z populacji (z doborem ze zwracaniem),
- *  - wybieramy z nich tego o największym fitness.
- *
- * @param {number} tournamentSize - liczba osobników biorących udział w turnieju
+ * @param {number} tournamentSize
  * @returns {(population: Individual[]) => Individual}
  */
 export function createTournamentSelection(tournamentSize = 3) {
@@ -20,8 +14,6 @@ export function createTournamentSelection(tournamentSize = 3) {
   }
 
   /**
-   * Selekcja turniejowa z rozmiarem turnieju ustalonym wyżej.
-   *
    * @param {Individual[]} population
    * @returns {Individual}
    */

@@ -1,5 +1,3 @@
-// apps/ga-knapscack-runner/src/main.js
-
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,19 +6,13 @@ import { loadKnapsackInstance } from "./knapsack/loadInstance.js";
 import { runAllExperiments } from "./experiments.js";
 import { CONFIG } from "./config.js";
 
-// Ustalenie ścieżki do root projektu (Backpack-problem)
-// __filename = .../Backpack-problem/apps/ga-knapscack-runner/src/main.js
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// rootDir = trzy poziomy wyżej: src -> ga-knapscack-runner -> apps -> Backpack-problem
 const rootDir = path.resolve(__dirname, "..", "..", "..");
 
 /**
- * Zapisuje obiekt z wynikami eksperymentów do pliku JSON
- * w katalogu "results/" w ROOTCIE projektu:
- *   Backpack-problem/results/<nazwa_zbioru>.json
- *
+
  * @param {string} datasetPath
  * @param {any} data
  */
@@ -54,7 +46,6 @@ async function main() {
 
   const experimentData = runAllExperiments(instance, filePath);
 
-  // Krótkie podsumowanie w konsoli
   const globalBest = experimentData.summary.globalBest;
   if (globalBest) {
     console.log();
@@ -82,7 +73,6 @@ async function main() {
   await saveResultsJson(filePath, experimentData);
 }
 
-// Uruchom main, obsłuż ewentualne błędy
 main().catch((err) => {
   console.error("Błąd podczas wykonywania programu:");
   console.error(err);

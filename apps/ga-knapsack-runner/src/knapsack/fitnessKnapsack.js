@@ -12,15 +12,9 @@
  */
 
 /**
- * Funkcja przystosowania dla dyskretnego problemu plecakowego.
- *
- * Zasada:
- *  - jeśli suma wag <= pojemność plecaka -> fitness = suma wartości,
- *  - jeśli suma wag > pojemność           -> fitness = 0 (osobnik nieważny).
- *
- * @param {number[]} chromosome           - binarny chromosom (0/1)
- * @param {KnapsackInstance} instance     - opis problemu
- * @returns {number}                      - wartość funkcji przystosowania
+ * @param {number[]} chromosome
+ * @param {KnapsackInstance} instance
+ * @returns {number}
  */
 export function fitnessKnapsack(chromosome, instance) {
   const { items, capacity } = instance;

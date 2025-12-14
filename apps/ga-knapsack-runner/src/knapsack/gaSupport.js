@@ -1,5 +1,3 @@
-// src/knapsack/gaSupport.js
-
 /**
  * @typedef {Object} KnapsackItem
  * @property {number} value
@@ -14,19 +12,8 @@
  */
 
 /**
- * Tworzy funkcję generującą losowy, dopuszczalny chromosom
- * dla zadanej instancji plecaka.
- *
- * Strategia:
- *  - zaczynamy od samych zer,
- *  - bierzemy losową permutację indeksów przedmiotów,
- *  - po kolei próbujemy je dodać, jeśli się jeszcze mieszczą w plecaku
- *    (i z pewnym prawdopodobieństwem, żeby zachować różnorodność).
- *
- * Dzięki temu każdy osobnik spełnia ograniczenie wagi.
- *
  * @param {KnapsackInstance} instance
- * @returns {(chromosomeLength: number) => number[]} funkcja tworząca chromosom
+ * @returns {(chromosomeLength: number) => number[]}
  */
 export function makeFeasibleChromosomeFn(instance) {
   const { itemCount, items, capacity } = instance;
@@ -37,13 +24,11 @@ export function makeFeasibleChromosomeFn(instance) {
 
     let remainingCapacity = capacity;
 
-    // indeksy 0..n-1
     const indices = [];
     for (let i = 0; i < n; i++) {
       indices.push(i);
     }
 
-    // tasowanie Fisher-Yates
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const tmp = indices[i];
@@ -66,16 +51,8 @@ export function makeFeasibleChromosomeFn(instance) {
 }
 
 /**
- * Tworzy funkcję naprawiającą chromosom:
- *  - jeśli suma wag <= capacity -> zwraca chromosom (kopię),
- *  - jeśli suma wag > capacity -> usuwa kolejne przedmioty o NAJGORSZYM
- *    stosunku value/weight, aż waga spadnie poniżej capacity.
- *
- * Dzięki temu populacja pozostaje w całości dopuszczalna,
- * a funkcja przystosowania może pozostać taka, jak w zadaniu.
- *
  * @param {KnapsackInstance} instance
- * @returns {(chromosome: number[]) => number[]} funkcja naprawy chromosomu
+ * @returns {(chromosome: number[]) => number[]}
  */
 export function makeRepairFn(instance) {
   const { items, capacity } = instance;
@@ -97,7 +74,6 @@ export function makeRepairFn(instance) {
       return repaired;
     }
 
-    // zbierz wybrane przedmioty razem z value/weight
     const selected = [];
     for (let i = 0; i < len; i++) {
       if (repaired[i] === 1) {
@@ -108,7 +84,6 @@ export function makeRepairFn(instance) {
       }
     }
 
-    // sort rosnąco po ratio (najgorszy jako pierwszy do wyrzucenia)
     selected.sort((a, b) => a.ratio - b.ratio);
 
     for (const { index } of selected) {
@@ -117,7 +92,6 @@ export function makeRepairFn(instance) {
       totalWeight -= items[index].weight;
     }
 
-    // awaryjnie, gdyby coś poszło nie tak (np. dziwne dane)
     if (totalWeight > capacity) {
       const ones = [];
       for (let i = 0; i < len; i++) {

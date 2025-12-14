@@ -12,11 +12,7 @@
  */
 
 /**
- * Dekoduje chromosom binarny jako rozwiązanie problemu plecakowego:
- *  - liczy sumaryczną wartość,
- *  - liczy sumaryczną wagę,
- *  - zbiera indeksy wybranych przedmiotów.
- *
+
  * @param {number[]} chromosome
  * @param {KnapsackInstance} instance
  */
@@ -33,7 +29,7 @@ export function decodeKnapsackSolution(chromosome, instance) {
     if (chromosome[i] === 1) {
       totalValue += items[i].value;
       totalWeight += items[i].weight;
-      chosenItems.push(i); // indeksy od 0
+      chosenItems.push(i);
     }
   }
 

@@ -1,5 +1,3 @@
-// src/experiments.js
-
 import { CONFIG } from "./config.js";
 import { runGA } from "./ga/runGA.js";
 import { fitnessKnapsack } from "./knapsack/fitnessKnapsack.js";
@@ -10,9 +8,7 @@ import {
 } from "./knapsack/gaSupport.js";
 
 /**
- * Pomocnicza funkcja – wyciąga nazwę pliku i kategorię zbioru
- * (low-dimensional / large_scale / high-dimensional / unknown) na podstawie ścieżki.
- *
+
  * @param {string} datasetPath
  * @param {import("./knapsack/fitnessKnapsack.js").KnapsackInstance} instance
  */
@@ -41,10 +37,6 @@ function buildDatasetMeta(datasetPath, instance) {
   };
 }
 
-/**
- * Uruchamia pojedynczy eksperyment GA dla zadanej konfiguracji operatorów
- * i parametrów, zwracając komplet danych potrzebnych do wykresów.
- */
 function runSingleGARun({
   instance,
   selectionKey,
@@ -102,11 +94,7 @@ function runSingleGARun({
 }
 
 /**
- * Uruchamia wszystkie wymagane eksperymenty (3.5, 4.5, 5.0)
- * dla danej instancji plecaka.
- *
- * Zwraca obiekt, który zostanie zapisany do JSON.
- *
+
  * @param {import("./knapsack/fitnessKnapsack.js").KnapsackInstance} instance
  * @param {string} datasetPath
  */
@@ -126,18 +114,14 @@ export function runAllExperiments(instance, datasetPath) {
   const selectionStrategies = CONFIG.strategies.selection;
   const crossoverStrategies = CONFIG.strategies.crossover;
 
-  // specjalna inicjalizacja i naprawa dla plecaka
   const createChromosomeFn = makeFeasibleChromosomeFn(instance);
   const repairFn = makeRepairFn(instance);
 
-  // --- Ustawienia siatki parametrów dla części 3.5 ---
   const mutationRatesGrid = [0.005, 0.02, 0.05];
   const crossoverRatesGrid = [0.6, 0.8, 0.95];
 
   /** @type {any[]} */
   const experiments = [];
-
-  // ====== 1) Ocena 3.5: różne współczynniki mutacji i krzyżowania ======
 
   {
     const groupRuns = [];
@@ -185,8 +169,6 @@ export function runAllExperiments(instance, datasetPath) {
       runs: groupRuns,
     });
   }
-
-  // ====== 2) Ocena 4.5: selekcja rankingowa vs ruletkowa ======
 
   {
     const groupRuns = [];
@@ -237,8 +219,6 @@ export function runAllExperiments(instance, datasetPath) {
     });
   }
 
-  // ====== 3) Ocena 4.5: krzyżowanie jedno- i dwupunktowe ======
-
   {
     const groupRuns = [];
 
@@ -287,8 +267,6 @@ export function runAllExperiments(instance, datasetPath) {
       runs: groupRuns,
     });
   }
-
-  // ====== 4) Ocena 5.0: selekcja rankingowa, ruletkowa oraz turniejowa ======
 
   {
     const groupRuns = [];
@@ -339,8 +317,6 @@ export function runAllExperiments(instance, datasetPath) {
       runs: groupRuns,
     });
   }
-
-  // ====== Podsumowanie globalne (najlepszy ze wszystkich uruchomień) ======
 
   let globalBest = null;
 
