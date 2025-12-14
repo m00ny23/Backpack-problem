@@ -1,10 +1,4 @@
-"""
-Użycie:
-.venv\Scripts\activate
-pip install matplotlib
-python plots.py --in ../../results --out ./plots
 
-"""
 from __future__ import annotations
 
 import argparse
